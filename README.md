@@ -113,6 +113,10 @@ La interfaz usa diccionarios TypeScript tipados y React Context, sin librerías 
 | GET | `/api/solicitudes/{id}/evidencia.pdf` | Descarga evidencia PDF |
 | GET | `/mock-mail` | Consulta correo simulado; admite `requestId` |
 
+## 📘 Documentación de API
+
+La especificación OpenAPI 3.0.3 está disponible en `backend/docs/openapi.yaml`. Puede visualizarse o importarse en herramientas compatibles con OpenAPI 3, como Swagger Editor o Postman.
+
 ## ⚙️ Variables de entorno
 
 Backend: `PURCHASE_REQUESTS_TABLE`, `MOCK_MAIL_TABLE` y `EVIDENCE_BUCKET` son configuradas por Serverless; `FRONTEND_BASE_URL` define la base de los enlaces y `AWS_REGION` la región. Frontend: `VITE_API_BASE_URL` apunta a la API. No deben almacenarse credenciales AWS en archivos `.env`.
@@ -154,10 +158,11 @@ No se incluyen Account IDs, credenciales ni tokens en el repositorio.
 
 Resultados finales locales:
 
-- Backend: 45 pruebas aprobadas; statements 96,66 %, branches 90,22 %, functions 100 % y lines 97,04 %.
-- Frontend: 49 pruebas aprobadas; statements 88,70 %, branches 80,79 %, functions 92,85 % y lines 92,25 %.
+- Backend: 46 pruebas aprobadas.
+- Frontend: 78 pruebas aprobadas.
+- Total: 124 pruebas automatizadas aprobadas.
 
-Los umbrales mínimos configurados son 60 % para statements, branches, functions y lines.
+Los umbrales mínimos de cobertura configurados son 60 % para statements, branches, functions y lines. No se publican porcentajes en esta sección porque no corresponden a una ejecución de cobertura vigente.
 
 ## 🧪 Cómo probar manualmente
 

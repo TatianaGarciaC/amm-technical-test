@@ -1,0 +1,605 @@
+openapi: 3.0.3
+info:
+  title: PurchaseFlow API
+  version: 1.0.0
+  license:
+    name: ISC
+  description: |
+    API del sistema PurchaseFlow para crear, consultar y decidir solicitudes de compra
+    con exactamente tres aprobadores, ver mensajes simulados y descargar la evidencia
+    PDF de procesos finalizados.
+
+    PurchaseFlow v1.0 - 2026  
+    Tatiana Garcia Contreras
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local
+security: []
+tags:
+  - name: Solicitudes
+    description: Creación y consulta de solicitudes de compra.
+  - name: Aprobaciones
+    description: Validación OTP y decisiones de aprobadores.
+  - name: Evidencias
+    description: Descarga de evidencia PDF de procesos finalizados.
+  - name: Demo
+    description: Herramientas exclusivas para demostración.
+paths:
+  /api/solicitudes:
+    post:
+      tags: [Solicitudes]
+      summary: Crear una solicitud de compra
+      operationId: createPurchaseRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePurchaseRequestDTO"
+            example:
+              title: Compra de portátiles
+              description: Compra de equipos para el equipo de desarrollo
+              amount: 15000000
+              requestedBy: Tatiana
+              approvers:
+                - name: Carlos García
+                  email: carlos.garcia@example.com
+                  role: FINANCE
+                - name: Laura Martínez
+                  email: laura.martinez@example.com
+                  role: MANAGER
+                - name: Andrés Rodríguez
+                  email: andres.rodriguez@example.com
+                  role: DIRECTOR
+      responses:
+        "201":
+          description: Solicitud creada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseRequestResponseDTO"
+              examples:
+                created:
+                  $ref: "#/components/examples/PendingPurchaseRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    get:
+      tags: [Solicitudes]
+      summary: Listar solicitudes de compra
+      operationId: listPurchaseRequests
+      responses:
+        "200":
+          description: Lista de solicitudes. Puede estar vacía.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PurchaseRequestResponseDTO"
+              example: []
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/solicitudes/{id}:
+    get:
+      tags: [Solicitudes]
+      summary: Consultar una solicitud de compra
+      operationId: getPurchaseRequest
+      parameters:
+        - $ref: "#/components/parameters/PurchaseRequestId"
+      responses:
+        "200":
+          description: Solicitud encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseRequestResponseDTO"
+              examples:
+                request:
+                  $ref: "#/components/examples/PendingPurchaseRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/PurchaseRequestNotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/solicitudes/{id}/validate-otp:
+    post:
+      tags: [Aprobaciones]
+      summary: Validar el token y OTP de un aprobador
+      operationId: validateApproverOtp
+      parameters:
+        - $ref: "#/components/parameters/PurchaseRequestId"
+      requestBody:
+        $ref: "#/components/requestBodies/ApproverCredentials"
+      responses:
+        "200":
+          description: Credenciales válidas; devuelve exclusivamente la vista segura del aprobador.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApproverPurchaseRequestDTO"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/PurchaseRequestNotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/ExpiredOtp"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/solicitudes/{id}/resend-otp:
+    post:
+      tags: [Aprobaciones]
+      summary: Regenerar y reenviar el OTP de un aprobador pendiente
+      description: Reemplaza el OTP vigente y conserva el mismo enlace de aprobación. No requiere que el OTP anterior ya haya expirado.
+      operationId: resendApproverOtp
+      parameters:
+        - $ref: "#/components/parameters/PurchaseRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproverTokenRequest"
+            example:
+              approverToken: 22222222-2222-4222-8222-222222222222
+      responses:
+        "200":
+          description: Nuevo código enviado al buzón simulado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResendApproverOtpResult"
+              example:
+                message: Verification code resent successfully.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/PurchaseRequestNotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/solicitudes/{id}/approve:
+    post:
+      tags: [Aprobaciones]
+      summary: Aprobar una solicitud como aprobador
+      operationId: approvePurchaseRequest
+      parameters:
+        - $ref: "#/components/parameters/PurchaseRequestId"
+      requestBody:
+        $ref: "#/components/requestBodies/ApproverCredentials"
+      responses:
+        "200":
+          description: Decisión de aprobación registrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseRequestResponseDTO"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/PurchaseRequestNotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/ExpiredOtp"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/solicitudes/{id}/reject:
+    post:
+      tags: [Aprobaciones]
+      summary: Rechazar una solicitud como aprobador
+      operationId: rejectPurchaseRequest
+      parameters:
+        - $ref: "#/components/parameters/PurchaseRequestId"
+      requestBody:
+        $ref: "#/components/requestBodies/ApproverCredentials"
+      responses:
+        "200":
+          description: Rechazo registrado; la solicitud queda REJECTED.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseRequestResponseDTO"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/PurchaseRequestNotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/ExpiredOtp"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /api/solicitudes/{id}/evidencia.pdf:
+    get:
+      tags: [Evidencias]
+      summary: Descargar la evidencia PDF
+      description: Devuelve la evidencia almacenada de una solicitud finalizada, COMPLETED o REJECTED.
+      operationId: getPurchaseRequestEvidence
+      parameters:
+        - $ref: "#/components/parameters/PurchaseRequestId"
+      responses:
+        "200":
+          description: Evidencia PDF.
+          headers:
+            Content-Disposition:
+              description: Nombre sugerido para descargar el archivo.
+              schema:
+                type: string
+                example: attachment; filename="purchase-request-11111111-1111-4111-8111-111111111111-evidence.pdf"
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: La evidencia aún no existe o no fue encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: NotFoundError
+                message: Evidence PDF not found
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /mock-mail:
+    get:
+      tags: [Demo]
+      summary: Consultar el buzón simulado
+      description: |
+        Endpoint exclusivo para demostración. No debe exponerse públicamente en un entorno productivo.
+        Puede devolver OTP y enlaces de aprobación dentro del cuerpo del mensaje simulado.
+      operationId: getMockMail
+      parameters:
+        - name: requestId
+          in: query
+          required: false
+          description: Si se proporciona, limita los mensajes a una solicitud.
+          schema:
+            type: string
+          example: 11111111-1111-4111-8111-111111111111
+      responses:
+        "200":
+          description: Mensajes simulados; puede ser una lista vacía.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MockMail"
+              example:
+                - id: 33333333-3333-4333-8333-333333333333
+                  to: carlos.garcia@example.com
+                  subject: "Solicitud de aprobación: Compra de portátiles"
+                  body: |-
+                    Hola Carlos García,
+
+                    Título: Compra de portátiles
+                    Solicitud ID: 11111111-1111-4111-8111-111111111111
+
+                    Enlace de aprobación:
+                    http://localhost:5173/approve?solicitud_id=11111111-1111-4111-8111-111111111111&approver_token=22222222-2222-4222-8222-222222222222
+
+                    Código de verificación (OTP): 123456
+                    Este código expirará en 3 minutos.
+                  createdAt: "2026-08-13T18:00:00.000Z"
+                  purchaseRequestId: 11111111-1111-4111-8111-111111111111
+                  approverId: 44444444-4444-4444-8444-444444444444
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+components:
+  parameters:
+    PurchaseRequestId:
+      name: id
+      in: path
+      required: true
+      description: Identificador de la solicitud de compra.
+      schema:
+        type: string
+        format: uuid
+      example: 11111111-1111-4111-8111-111111111111
+  requestBodies:
+    ApproverCredentials:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApproverCredentials"
+          example:
+            approverToken: 22222222-2222-4222-8222-222222222222
+            otp: "123456"
+  schemas:
+    PurchaseRequestStatus:
+      type: string
+      enum: [PENDING, COMPLETED, REJECTED]
+    ApproverStatus:
+      type: string
+      enum: [PENDING, SIGNED, REJECTED]
+    CreateApproverDTO:
+      type: object
+      required: [name, email, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Carlos García
+        email:
+          type: string
+          format: email
+          example: carlos.garcia@example.com
+        role:
+          type: string
+          minLength: 1
+          description: Debe ser distinto, ignorando mayúsculas y espacios, de los otros dos roles.
+          example: FINANCE
+    CreatePurchaseRequestDTO:
+      type: object
+      required: [title, description, amount, requestedBy, approvers]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Compra de portátiles
+        description:
+          type: string
+          minLength: 1
+          example: Compra de equipos para el equipo de desarrollo
+        amount:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          example: 15000000
+        requestedBy:
+          type: string
+          minLength: 1
+          example: Tatiana
+        approvers:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/CreateApproverDTO"
+    ApproverResponseDTO:
+      type: object
+      required: [id, name, email, role, status, signedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        status:
+          $ref: "#/components/schemas/ApproverStatus"
+        signedAt:
+          type: string
+          format: date-time
+          nullable: true
+    PurchaseRequestResponseDTO:
+      type: object
+      description: Respuesta pública segura; no incluye OTP, tokens ni expiración del OTP.
+      required: [id, title, description, amount, createdAt, requestedBy, status, approvers]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        requestedBy:
+          type: string
+        status:
+          $ref: "#/components/schemas/PurchaseRequestStatus"
+        approvers:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/ApproverResponseDTO"
+    ApproverDetailDTO:
+      type: object
+      required: [id, name, email, role, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        status:
+          $ref: "#/components/schemas/ApproverStatus"
+    ApproverPurchaseRequestDTO:
+      type: object
+      description: Vista segura devuelta después de validar OTP y token.
+      required: [requestId, title, description, amount, createdAt, requestedBy, approver]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        requestedBy:
+          type: string
+        approver:
+          $ref: "#/components/schemas/ApproverDetailDTO"
+    ApproverCredentials:
+      type: object
+      required: [approverToken, otp]
+      properties:
+        approverToken:
+          type: string
+          minLength: 1
+          description: Token individual contenido en el enlace simulado.
+        otp:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: Código de verificación de seis dígitos.
+    ApproverTokenRequest:
+      type: object
+      required: [approverToken]
+      properties:
+        approverToken:
+          type: string
+          minLength: 1
+    ResendApproverOtpResult:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          enum: [Verification code resent successfully.]
+    MockMail:
+      type: object
+      description: Mensaje simulado que puede incluir OTP y enlace de aprobación dentro de body.
+      required: [id, to, subject, body, createdAt, purchaseRequestId, approverId]
+      properties:
+        id:
+          type: string
+        to:
+          type: string
+          format: email
+        subject:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        purchaseRequestId:
+          type: string
+        approverId:
+          type: string
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum: [ValidationError, UnauthorizedError, NotFoundError, ExpiredOtpError, ConflictError, InternalServerError]
+        message:
+          type: string
+  responses:
+    BadRequest:
+      description: Solicitud inválida o parámetro id ausente.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: ValidationError
+            message: Request body is required
+    Unauthorized:
+      description: Token u OTP inválido.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: UnauthorizedError
+            message: Invalid OTP
+    PurchaseRequestNotFound:
+      description: Solicitud no encontrada.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: NotFoundError
+            message: Purchase request not found
+    Conflict:
+      description: La solicitud o el aprobador ya no permite la operación.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: ConflictError
+            message: Purchase request has already finished
+    ExpiredOtp:
+      description: El OTP expiró.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: ExpiredOtpError
+            message: OTP has expired
+    InternalServerError:
+      description: Error interno no detallado al cliente.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: InternalServerError
+            message: Internal server error
+  examples:
+    PendingPurchaseRequest:
+      summary: Solicitud pendiente segura
+      value:
+        id: 11111111-1111-4111-8111-111111111111
+        title: Compra de portátiles
+        description: Compra de equipos para el equipo de desarrollo
+        amount: 15000000
+        createdAt: "2026-08-13T18:00:00.000Z"
+        requestedBy: Tatiana
+        status: PENDING
+        approvers:
+          - id: 44444444-4444-4444-8444-444444444441
+            name: Carlos García
+            email: carlos.garcia@example.com
+            role: FINANCE
+            status: PENDING
+            signedAt: null
+          - id: 44444444-4444-4444-8444-444444444442
+            name: Laura Martínez
+            email: laura.martinez@example.com
+            role: MANAGER
+            status: PENDING
+            signedAt: null
+          - id: 44444444-4444-4444-8444-444444444443
+            name: Andrés Rodríguez
+            email: andres.rodriguez@example.com
+            role: DIRECTOR
+            status: PENDING
+            signedAt: null
