@@ -117,6 +117,27 @@ La interfaz usa diccionarios TypeScript tipados y React Context, sin librerías 
 
 La especificación OpenAPI 3.0.3 está disponible en `backend/docs/openapi.yaml`. Puede visualizarse o importarse en herramientas compatibles con OpenAPI 3, como Swagger Editor o Postman.
 
+Para probar la API desde una de estas herramientas:
+
+1. Abra `backend/docs/openapi.yaml` en una herramienta compatible con OpenAPI 3, como Swagger Editor o Postman.
+2. Seleccione el servidor “AWS - Ambiente de demostración (dev)”.
+3. Ejecute primero `GET /api/solicitudes`.
+4. También puede consultar `GET /mock-mail`.
+5. Para ejecutar `GET /api/solicitudes/{id}`, utilice un ID retornado previamente por `GET /api/solicitudes`.
+6. Los endpoints de aprobación requieren respetar el flujo completo mediante el token individual y un OTP vigente.
+
+## 🌎 Ambiente de demostración
+
+Backend API - AWS API Gateway:
+
+`https://zotl5cs229.execute-api.us-east-1.amazonaws.com`
+
+Especificación OpenAPI: `backend/docs/openapi.yaml`
+
+El backend está desplegado en el ambiente `dev` de AWS y utiliza API Gateway, Lambda, DynamoDB y S3. La especificación OpenAPI incluye este ambiente como servidor principal para ejecutar solicitudes desde herramientas compatibles. El endpoint `/mock-mail` es exclusivamente una herramienta de demostración y no debe exponerse públicamente en producción.
+
+El frontend puede continuar ejecutándose localmente siguiendo las instrucciones de este README.
+
 ## ⚙️ Variables de entorno
 
 Backend: `PURCHASE_REQUESTS_TABLE`, `MOCK_MAIL_TABLE` y `EVIDENCE_BUCKET` son configuradas por Serverless; `FRONTEND_BASE_URL` define la base de los enlaces y `AWS_REGION` la región. Frontend: `VITE_API_BASE_URL` apunta a la API. No deben almacenarse credenciales AWS en archivos `.env`.

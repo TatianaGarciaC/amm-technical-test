@@ -2,8 +2,6 @@ openapi: 3.0.3
 info:
   title: PurchaseFlow API
   version: 1.0.0
-  license:
-    name: ISC
   description: |
     API del sistema PurchaseFlow para crear, consultar y decidir solicitudes de compra
     con exactamente tres aprobadores, ver mensajes simulados y descargar la evidencia
@@ -12,6 +10,8 @@ info:
     PurchaseFlow v1.0 - 2026  
     Tatiana Garcia Contreras
 servers:
+  - url: https://zotl5cs229.execute-api.us-east-1.amazonaws.com
+    description: AWS - Ambiente de demostración (dev)
   - url: http://localhost:3000
     description: Desarrollo local
 security: []
