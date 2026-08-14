@@ -1,0 +1,165 @@
+service: amm-purchase-approval-api
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  httpApi:
+    cors:
+      allowedOrigins:
+        - "*" # Demo only: restrict to the deployed frontend origin in production.
+      allowedHeaders:
+        - Content-Type
+      allowedMethods:
+        - GET
+        - POST
+        - OPTIONS
+  environment:
+    PURCHASE_REQUESTS_TABLE:
+      Ref: PurchaseRequestsTable
+    MOCK_MAIL_TABLE:
+      Ref: MockMailTable
+    EVIDENCE_BUCKET:
+      Ref: EvidenceBucket
+    FRONTEND_BASE_URL: ${env:FRONTEND_BASE_URL, 'http://localhost:5173'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Scan
+          Resource:
+            - Fn::GetAtt: [PurchaseRequestsTable, Arn]
+            - Fn::GetAtt: [MockMailTable, Arn]
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+          Resource:
+            Fn::Join:
+              - ""
+              - - Fn::GetAtt: [EvidenceBucket, Arn]
+                - "/evidence/*"
+
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node22
+
+package:
+  individually: true
+  patterns:
+    - "!dist/**"
+    - "!tmp/**"
+    - "!tests/**"
+    - "!coverage/**"
+    - "!.env*"
+    - "!*.md"
+
+functions:
+  createPurchaseRequest:
+    handler: src/handlers/createPurchaseRequestHandler.createPurchaseRequestHandler
+    events:
+      - httpApi: "POST /api/solicitudes"
+  listPurchaseRequests:
+    handler: src/handlers/listPurchaseRequestsHandler.listPurchaseRequestsHandler
+    events:
+      - httpApi: "GET /api/solicitudes"
+  getPurchaseRequest:
+    handler: src/handlers/getPurchaseRequestHandler.getPurchaseRequestHandler
+    events:
+      - httpApi: "GET /api/solicitudes/{id}"
+  validateApproverOtp:
+    handler: src/handlers/validateApproverOtpHandler.validateApproverOtpHandler
+    events:
+      - httpApi: "POST /api/solicitudes/{id}/validate-otp"
+  resendApproverOtp:
+    handler: src/handlers/resendApproverOtpHandler.resendApproverOtpHandler
+    events:
+      - httpApi: "POST /api/solicitudes/{id}/resend-otp"
+  approvePurchaseRequest:
+    handler: src/handlers/approvePurchaseRequestHandler.approvePurchaseRequestHandler
+    events:
+      - httpApi: "POST /api/solicitudes/{id}/approve"
+  rejectPurchaseRequest:
+    handler: src/handlers/rejectPurchaseRequestHandler.rejectPurchaseRequestHandler
+    events:
+      - httpApi: "POST /api/solicitudes/{id}/reject"
+  mockMail:
+    handler: src/handlers/mockMailHandler.mockMailHandler
+    events:
+      - httpApi: "GET /mock-mail"
+  getEvidence:
+    handler: src/handlers/getEvidenceHandler.getEvidenceHandler
+    events:
+      - httpApi: "GET /api/solicitudes/{id}/evidencia.pdf"
+
+resources:
+  Resources:
+    PurchaseRequestsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${sls:stage}-purchase-requests
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+    MockMailTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${sls:stage}-mock-mail
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+    EvidenceBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName:
+          Fn::Join:
+            - "-"
+            - - Ref: AWS::StackName
+              - Ref: AWS::AccountId
+              - Ref: AWS::Region
+              - evidence
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
+  Outputs:
+    HttpApiEndpoint:
+      Description: HTTP API endpoint
+      Value:
+        Fn::GetAtt: [HttpApi, ApiEndpoint]
+    PurchaseRequestsTableName:
+      Description: Purchase requests DynamoDB table
+      Value:
+        Ref: PurchaseRequestsTable
+    MockMailTableName:
+      Description: Mock mail DynamoDB table
+      Value:
+        Ref: MockMailTable
+    EvidenceBucketName:
+      Description: Private evidence bucket
+      Value:
+        Ref: EvidenceBucket
