@@ -190,6 +190,21 @@ Los umbrales mínimos configurados son 60 % para statements, branches, functions
 - Restringir CORS al origen productivo.
 - Definir hosting y distribución CDN del frontend.
 
+### Vite en lugar de Webpack
+
+Aunque Webpack se encontraba dentro de la stack recomendada, se utilizó
+Vite como herramienta de construcción del frontend.
+
+Para el alcance actual no se identificó una necesidad real de implementar
+Module Federation o una arquitectura de microfrontends. Vite permitió
+reducir configuración, mantener un ciclo de desarrollo rápido y generar
+un bundle optimizado, conservando React, React Router y la arquitectura
+cliente-servidor requerida.
+
+La decisión busca evitar complejidad accidental sin aportar dependencias
+arquitectónicas que el dominio actualmente no requiere
+
+
 ## 👩‍💻 Autor
 
 Tatiana Garcia Contreras  
