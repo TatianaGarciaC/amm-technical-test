@@ -6,7 +6,7 @@ PurchaseFlow es una aplicación web serverless desarrollada como prueba técnica
 
 ## 📋 Descripción
 
-Cada solicitud de compra se crea con exactamente tres aprobadores. Cada uno recibe un enlace individual, un token individual y un OTP de seis dígitos con expiración de tres minutos. Las decisiones son independientes: tres aprobaciones completan la solicitud, mientras que cualquier rechazo la cierra inmediatamente. Cuando se obtienen las tres aprobaciones se genera automáticamente una evidencia PDF.
+Cada solicitud de compra se crea con exactamente tres aprobadores. Cada uno recibe un enlace individual, un token individual y un OTP de seis dígitos con expiración de tres minutos. Las decisiones son independientes: tres aprobaciones completan la solicitud, mientras que cualquier rechazo la cierra inmediatamente. Cuando la solicitud alcanza un estado final (COMPLETED o REJECTED), se genera automáticamente una evidencia PDF con la trazabilidad del proceso.
 
 ## ✨ Características principales
 
